@@ -3,43 +3,67 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function register(Request $request) {
+    // Affiche le formulaire de connexion
+    public function showLoginForm()
+    {
+        return view('login');
+    }
+
+    // Traitement de la connexion
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
+        if (Auth::attempt($credentials)) {
+            $request->session()->regenerate();
+            return redirect()->intended('/dashboard'); // rediriger vers la page d'accueil après connexion
+        }
+
+        return back()->with('error', 'Les identifiants sont incorrects.');
+    }
+
+    // Affiche le formulaire d'inscription
+    public function showRegisterForm()
+    {
+        return view('register');
+    }
+
+    // Traitement de l'inscription
+    public function register(Request $request)
+    {
         $request->validate([
-            'nom' => 'required|string|max:255',
-            'prenom' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', 'min:6', 'confirmed'],
         ]);
 
         $user = User::create([
-            'nom' => $request->nom,
-            'prenom' => $request->prenom,
+            'name' => $request->name,
             'email' => $request->email,
-            'password' => bcrypt($request->password),
+            'password' => Hash::make($request->password),
         ]);
 
-        return response()->json(['message' => 'Utilisateur créé avec succès'], 201);
+        Auth::login($user); // Connexion automatique après inscription
+
+        return redirect('/dashboard'); // Redirection après inscription
     }
 
-    public function login(Request $request) {
-        $request->validate([
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
+    // Déconnexion
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-        $credentials = $request->only('email', 'password');
-
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            return response()->json(['message' => 'Connexion réussie', 'user' => $user], 200);
-        }
-
-        return response()->json(['message' => 'Identifiants incorrects'], 401);
+        return redirect('/login');
     }
 }
-

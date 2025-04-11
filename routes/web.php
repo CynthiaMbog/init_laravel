@@ -20,3 +20,8 @@ Route::get('/', function () {
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// Ajout de la route GET /login pour afficher le formulaire de connexion
+Route::get('/login', function () {
+    return view('auth.login');
+});
